@@ -18,6 +18,13 @@ enum fdf_data_types {
 
    Returns 1 if type is valid, 0 otherwise.
 */
-int fdf_verify_data_type( unsigned int );
+int fdf_verify_data_type( unsigned int data_type );
+
+/**
+   \brief Returns the size (in chars) of the given data type.
+*/
+unsigned int fdf_data_type_to_rw_size( unsigned int data_type );
+
+
 
 #endif // FDF_DATA_TYPES_H
