@@ -10,6 +10,8 @@
 
 #include "fdf_data_types.h"
 #include "fdf_file.h"
+#include "fdf_data_1d.h"
+#include "fdf_data_2d.h"
 
 
 

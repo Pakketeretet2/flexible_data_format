@@ -6,17 +6,16 @@
 
 #include "fdf.h"
 
+#include <assert.h>
 #include <stdio.h>
-
 
 int main( int argc, char **argv )
 {
 	fdf_file *bf = fdf_open( "test.fdf", "wb" );
-	fprintf( stderr, "Opened FDF file %s at %p.\n", "test.fdf", (void*)bf );
-	fprintf( stderr, "           File is at %p.\n", (void*)bf->f );
 
 	double data[6]  = {-1,-1,-1,-1,-1,-1};
 	double data2[6] = {0,0,0,0,0,0};
+
 	data[0] = -2.0;
 	data[1] = 2.0;
 	data[2] = 4.0;
@@ -36,21 +35,12 @@ int main( int argc, char **argv )
 	fdf_write_1d( bf, &templ, &time, data );
 	fdf_close( bf );
 
-	fprintf( stderr, "Closed FDF file %s at %p.\n", "test.fdf", (void*)bf );
-	fprintf( stderr, "           File is at %p.\n", (void*)bf->f );
-
 	fdf_file *bf2 = fdf_open( "test.fdf", "rb" );
 
-	fprintf( stderr, "Opened FDF file %s at %p.\n", "test.fdf", (void*)bf2 );
-	fprintf( stderr, "           File is at %p.\n", (void*)bf2->f );
 	fdf_read_1d( bf2, &templ2, &time, data2 );
-
-	fputs( "Template:\n", stdout );
-	fprintf( stdout, "Size %u, type (time) %u, type (data) %u\n",
-	         templ2.N, templ2.time_type, templ2.data_type );
-	fputs( "data1, data2:\n", stdout );
-	for( int i = 0; i < 6; ++i ){
-		fprintf( stdout, "%f %f\n", data[i], data2[i] );
+	for( size_t i = 0; i < 6; ++i ){
+		assert( data[i] == data2[i] &&
+		        "Incorrect read from written file" );
 	}
 
 	fdf_close( bf );
