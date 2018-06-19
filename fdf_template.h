@@ -20,10 +20,11 @@ void fdf_template_destroy( fdf_template * );
 */
 int fdf_template_set_time_type( fdf_template *templ, unsigned int type );
 
+
 /**
    \brief Returns the time type of the template.
 */
-unsigned int fdf_template_get_time_type( fdf_template *templ );
+unsigned int fdf_template_get_time_type( const fdf_template *templ );
 
 
 /**
@@ -34,7 +35,7 @@ int fdf_template_set_data_type( fdf_template *templ, unsigned int type );
 /**
    \brief Returns the data type of the template.
 */
-unsigned int fdf_template_get_data_type( fdf_template *templ );
+unsigned int fdf_template_get_data_type( const fdf_template *templ );
 
 
 /**
@@ -49,6 +50,15 @@ void fdf_template_set_fixed_grid( fdf_template *templ, unsigned int type );
 int fdf_template_is_fixed_grid( fdf_template *templ );
 
 
+/**
+   \brief Sets the data type of the template.
+*/
+int fdf_template_set_dimension( fdf_template *templ, int dim );
+
+/**
+   \brief Returns the data type of the template.
+*/
+int fdf_template_get_dimension( const fdf_template *templ );
 
 
 

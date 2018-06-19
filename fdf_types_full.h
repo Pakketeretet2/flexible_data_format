@@ -7,7 +7,6 @@
 struct fdf_file
 {
 	FILE *f;
-	int nwrites;
 };
 
 
@@ -15,12 +14,16 @@ struct fdf_template
 {
 	int time_type;
 	int data_type;
+	int dimension;
 	int fixed_grid_size;
 };
 
 
-
-
+struct fdf_grid_meta
+{
+	unsigned int type;
+	int size;
+};
 
 
 

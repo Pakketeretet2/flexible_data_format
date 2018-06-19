@@ -7,7 +7,7 @@
 
 typedef struct fdf_file fdf_file;
 typedef struct fdf_template fdf_template;
-
+typedef struct fdf_grid_meta fdf_grid_meta;
 
 
 
