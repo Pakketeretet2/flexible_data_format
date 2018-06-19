@@ -109,12 +109,10 @@ unsigned int fdf_write_time( fdf_file *f, const fdf_template *templ,
 
 
 
-unsigned int fdf_write_grid( fdf_file *f, unsigned int data_type,
-			     int Nx, void *grid )
+unsigned int fdf_write_grid_meta( fdf_file *f, int Nx, unsigned int data_type )
 {
 	assert( fdf_verify_data_type( data_type ) &&
 		"Unknown data type!" );
-	unsigned int size_write = fdf_data_type_to_rw_size( data_type );
 	unsigned int n_written = fwrite( &Nx, sizeof(int), 1, f->f );
 	unsigned int tot_bytes = 0;
 
@@ -126,14 +124,24 @@ unsigned int fdf_write_grid( fdf_file *f, unsigned int data_type,
 	assert( n_written == 1 &&
 		"Byte write mismatch!" );
 	tot_bytes += n_written*sizeof(unsigned int);
-
-	n_written = fwrite( grid, size_write, Nx, f->f );
-	assert( n_written == Nx &&
-		"Byte write mismatch!" );
-	tot_bytes += n_written * size_write;
 	return tot_bytes;
 }
 
+
+unsigned int fdf_write_grid_data( fdf_file *f, int Nx,
+                                  unsigned int data_type, void *grid )
+{
+	assert( fdf_verify_data_type( data_type ) &&
+	        "Unknown data type!" );
+
+	unsigned int size_write = fdf_data_type_to_rw_size( data_type );
+	unsigned int n_written = fwrite( grid, size_write, Nx, f->f );
+	unsigned int tot_bytes = 0;
+	assert( n_written == Nx &&
+	        "Byte write mismatch!" );
+	tot_bytes += n_written * size_write;
+	return tot_bytes;
+}
 
 
 unsigned int fdf_write_data_1d( fdf_file *f, const fdf_template *templ,
@@ -200,7 +208,7 @@ int fdf_read_grid_meta( fdf_file *f, int *Nx, unsigned int *grid_type )
 
 
 
-int fdf_read_grid( fdf_file *f, unsigned int data_type, int Nx, void *grid )
+int fdf_read_grid( fdf_file *f, int Nx, unsigned int data_type, void *grid )
 {
 	unsigned int size_read = fdf_data_type_to_rw_size( data_type );
 	int n_read = fread( grid, size_read, Nx, f->f );

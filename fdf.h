@@ -21,11 +21,13 @@
    [dim]
    which indicates the number of dimensions of the data.
    Then, there are dim entries of
-   [dim size][type][grid]
+   [dim size][type]
    for which
    [dim size]  is the size of the dimth grid
    [type]      is the type of data of the dimth grid
-   [grid]      is the dimth grid
+   Then there are dim entries of
+   [grid]
+   where the first corresponds to the first encounter of [dim size], etc.
    Finally, there are N entries of [time] [data]
    where
    [time]      is the time step corresponding to the data and
@@ -40,10 +42,26 @@
 #include "fdf_file.h"
 
 
-int fdf_read_fixed_grid_meta( fdf_file *f, const fdf_template *templ,
-			      int *dimension, void ***grids, int **grid_sizes,
-			      unsigned int **grid_types );
+int fdf_read_grids( fdf_file *f, const fdf_template *templ,
+                    int *dimension, void ***grids, int **grid_sizes,
+                    unsigned int **grid_types );
 
+
+unsigned int fdf_write_grids( fdf_file *f, const fdf_template *templ,
+                              int dimension, void **grids, int *grid_sizes,
+                              unsigned int *grid_types );
+
+
+int fdf_destroy_grids( int dimension, void ***grids, int **grid_sizes,
+                       unsigned int **grid_types );
+
+
+unsigned int fdf_write_data( );
+
+
+int fdf_read_data( fdf_file *f, const fdf_template *templ,
+                   int dimension, const int *grid_sizes,
+                   void *time, void *data );
 
 
 

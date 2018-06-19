@@ -48,8 +48,12 @@ unsigned int fdf_write_template( fdf_file *f, const fdf_template *templ );
 unsigned int fdf_write_time( fdf_file *f, const fdf_template *templ,
 			     void *tstamp );
 
-unsigned int fdf_write_grid( fdf_file *f, unsigned int data_type,
-			     int Nx, void *grid );
+unsigned int fdf_write_grid_meta( fdf_file *f, int Nx, unsigned int data_type );
+
+
+unsigned int fdf_write_grid_data( fdf_file *f, int Nx,
+                                  unsigned int data_type, void *grid );
+
 
 unsigned int fdf_write_data_1d( fdf_file *f, const fdf_template *templ,
 				int Nx, void *data );
@@ -68,7 +72,7 @@ int fdf_read_time( fdf_file *f, const fdf_template *templ, void *tstamp );
 
 int fdf_read_grid_meta( fdf_file *f, int *Nx, unsigned int *grid_type );
 
-int fdf_read_grid( fdf_file *f, unsigned int data_type, int Nx, void *grid );
+int fdf_read_grid( fdf_file *f, int Nx, unsigned int data_type, void *grid );
 
 int fdf_read_data_1d( fdf_file *f, const fdf_template *templ, int N, void *data );
 

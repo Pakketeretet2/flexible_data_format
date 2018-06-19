@@ -4,12 +4,14 @@
    Contains a simple example for using FDF files.
 */
 
+
 #include "fdf.h"
 
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 
 
 /**
@@ -36,7 +38,8 @@ int test_1d_read_write()
 	int dimension = 1;
 	bytes += fdf_write_template( f1, templ );
 	bytes += fdf_write_dimension( f1, dimension );
-	bytes += fdf_write_grid( f1, FDF_DATA_DOUBLE, 6, x );
+	bytes += fdf_write_grid_meta( f1, 6, FDF_DATA_DOUBLE );
+	bytes += fdf_write_grid_data( f1, 6, FDF_DATA_DOUBLE, x );
 
 	int t = 23;
 	for( int j = 0; j < 10; ++j ){
@@ -107,7 +110,7 @@ int test_1d_read_write()
 	unsigned int size_to_alloc = sizeof(double) * grid_size_x;
 	double *x2 = malloc( size_to_alloc );
 	double *data2 = malloc( sizeof(double)*grid_size_x );
-	status = fdf_read_grid( f2, grid_type, grid_size_x, x2 );
+	status = fdf_read_grid( f2, grid_size_x, grid_type, x2 );
 	if( status ){
 		code = -1;
 		goto free_x2;
@@ -161,11 +164,26 @@ int test_high_level()
 	int *grid_sizes = NULL;
 	unsigned int *grid_types = NULL;
 
-	status = fdf_read_fixed_grid_meta( f, templ, &dim, &grids, &grid_sizes, &grid_types );
+	status = fdf_read_grids( f, templ, &dim, &grids, &grid_sizes, &grid_types );
 	fprintf( stderr, "File has %d dimensions. Here is each grid size and type:\n", dim );
 	for( int i = 0; i < dim; ++i ){
 		fprintf( stderr, "  %d %u\n", grid_sizes[i], grid_types[i] );
 	}
+
+	double *grid = (double *)grids[0];
+	for( int i = 0; i < dim; ++i ){
+		for( int j = 0; j < grid_sizes[i]; ++j ){
+			fprintf( stderr, "%g %d\n", grid[j], j );
+		}
+	}
+
+	void *data = NULL;
+
+
+
+	fdf_destroy_grids( dim, &grids, &grid_sizes, &grid_types );
+	fdf_template_destroy( templ );
+	fdf_close(f);
 
 	return 0;
 }
