@@ -11,6 +11,8 @@
 #include "fdf_types_opaque.h"
 #include "fdf_enums.h"
 
+#include <stdio.h>
+
 
 
 /**
@@ -36,6 +38,10 @@ int fdf_verify_header( fdf_file *fdf_f );
 void fdf_close( fdf_file *f );
 
 
+/**
+   \brief Checks if the header has the correct magic cookie.
+*/
+int fdf_verify_header_cookie( const void *header );
 
 
 
@@ -50,14 +56,15 @@ unsigned int fdf_write_time( fdf_file *f, const fdf_template *templ,
 
 unsigned int fdf_write_grid_meta( fdf_file *f, const fdf_grid_meta *grid_spec );
 
+
 unsigned int fdf_write_grid_data( fdf_file *f, const fdf_grid_meta *grid_spec,
                                   void *grid );
 
+unsigned int fdf_write_data_block( fdf_file *f, const fdf_template *templ,
+                                   const fdf_grid_meta *grid_specs,
+                                   void *time, void *data );
 
 
-
-unsigned int fdf_write_data_1d( fdf_file *f, const fdf_template *templ,
-				int Nx, void *data );
 
 
 
@@ -76,20 +83,24 @@ int fdf_read_grid_data( fdf_file *f, const fdf_grid_meta *grid_specs,
                         void *grid );
 
 
-int fdf_read_data_1d( fdf_file *f, const fdf_template *templ,
-                      int N, void *data );
-
-
-unsigned int fdf_write_data_2d( fdf_file *f, const fdf_template *templ,
-				int Nx, int Ny, void *data );
-
-
-int fdf_read_data_2d( fdf_file *f, const fdf_template *templ,
-		      int Nx, int Ny, void *data );
-
-
 int fdf_read_data_raw( fdf_file *f, const fdf_template *templ,
-                       int Ntot, void *data );
+                       const fdf_grid_meta *grid_specs, void *data );
+
+int fdf_read_data_block( fdf_file *f, const fdf_template *templ,
+                         const fdf_grid_meta *grid_specs,
+                         void *time, void *data );
+
+
+
+int fdf_getpos( fdf_file *f, fpos_t *pos );
+
+int fdf_jump_to_pos( fdf_file *f, const fpos_t *pos );
+
+int fdf_jump_to_n_blocks( fdf_file *f );
+
+int fdf_jump_to_file_size( fdf_file *f );
+
+int fdf_jump_to_checksum( fdf_file *f );
 
 
 

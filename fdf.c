@@ -27,7 +27,6 @@ int fdf_init_grid_meta( const fdf_template *templ,
 	if( dim == 2 ){
 		(*grid_specs)[1] = grid_specs_ + 1;
 	}
-
 	return FDF_SUCCESS;
 }
 
@@ -37,7 +36,6 @@ int fdf_destroy_grid_meta( fdf_grid_meta *grid_specs )
 	free( grid_specs );
 	return FDF_SUCCESS;
 }
-
 
 
 
@@ -81,7 +79,6 @@ int fdf_init_data( const fdf_template *templ,
 }
 
 
-
 int fdf_destroy_grid( const fdf_template *templ, void **grids )
 {
 	for( int i = 0; i <templ->dimension; ++i ){
@@ -98,19 +95,16 @@ int fdf_destroy_data( void *data )
 }
 
 
-int fdf_read_data_block( fdf_file *f, const fdf_template *templ,
-                         const fdf_grid_meta *grid_specs, void *time,
-                         void *data )
-{
-	int n_expect = grid_specs[0].size;
-	if( templ->dimension == 2 ) n_expect *= grid_specs[1].size;
 
-	int status = fdf_read_time( f, templ, time );
-	if( status != FDF_SUCCESS ){
-		return status;
+int fdf_destroy_grids( int dimension, void ***grids, int **grid_sizes,
+                       unsigned int **grid_types )
+{
+	for( int i = 0; i < dimension; ++i ){
+		free((*grids)[i]);
 	}
-	/* fdf_read_data_raw already checks for right size. */
-	fdf_read_data_raw( f, templ, n_expect, data );
+	free(*grids);
+	free(*grid_sizes);
+	free(*grid_types);
 
 	return FDF_SUCCESS;
 }

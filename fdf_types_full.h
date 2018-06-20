@@ -2,11 +2,14 @@
 #define FDF_TYPES_FULL_H
 
 #include <stdio.h>
-
+#include <stdint.h>
 
 struct fdf_file
 {
 	FILE *f;
+	uint64_t bytes_written;
+	uint32_t blocks_written;
+	uint32_t open_mode;
 };
 
 

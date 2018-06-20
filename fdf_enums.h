@@ -14,6 +14,7 @@ enum read_write_modes
 	FDF_EOF_REACHED = -10,
 
 	/* Read/write errors */
+	FDF_FSEEK_ERROR = -5,
 	FDF_INVALID_READ = -4,
 	FDF_OPEN_FOR_READ_FAILED = -3,
 	FDF_OPEN_FOR_WRITE_FAILED = -2,
@@ -23,8 +24,9 @@ enum read_write_modes
 	FDF_SUCCESS = 0,
 
 	/* Read/write modes. */
-	FDF_READ_ONLY = 1,
-	FDF_WRITE_ONLY = 2,
+	FDF_READ_ONLY   = 1,
+	FDF_WRITE_ONLY  = 2,
+	FDF_APPEND_ONLY = 3,
 
 	/* Errors relating to invalid reads. */
 	FDF_READ_DIMENSION_MISMATCH = 10,

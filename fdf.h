@@ -29,6 +29,7 @@
          [grid]      The dim-th grid
          [time]      The time corresponding to the data
          [data]      the actual data.
+   where the first corresponds to the first encounter of [dim size], etc.
 
 
    if fixed_grid_size is 0, then the rest of the file is laid out as follows:
@@ -66,9 +67,6 @@ int fdf_read_grid_block( fdf_file *f, const fdf_template *templ,
                          void *data );
 
 
-int fdf_read_data_block( fdf_file *f, const fdf_template *templ,
-                         const fdf_grid_meta *grid_specs, void *time,
-                         void *data );
 
 
 

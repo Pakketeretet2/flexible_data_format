@@ -4,6 +4,7 @@
    Contains a simple example for using FDF files.
 */
 
+
 #include "fdf.h"
 
 #include <assert.h>
@@ -11,7 +12,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-
 
 
 
@@ -51,8 +51,8 @@ int test_1d_read_write()
 
 	int t = 23;
 	for( int j = 0; j < 10; ++j ){
-		bytes += fdf_write_time( f1, templ, &t );
-		bytes += fdf_write_data_1d( f1, templ, 6, data );
+		bytes += fdf_write_data_block( f1, templ, grid_spec,
+		                               &t, data );
 		for( int i = 0; i < 6; ++i ){
 			data[i] += 1.0;
 		}
@@ -135,12 +135,12 @@ int test_1d_read_write()
 	int t2 = 0;
 	t = 23;
 	for( int j = 0; j < 10; ++j ){
-		fdf_read_time( f2, templ2, &t2 );
-		if( t2 != t ){
-			code = -1;
+		// status = fdf_read_data_1d( f2, templ2, grid_size_x, data2 );
+		int n_read = fdf_read_data_block( f2, templ2, grid_spec2, &t2, data2 );
+		if( n_read != grid_size_x + 1 ){
+			fprintf( stderr, "Data size read mismatch!\n" );
 			goto free_x2;
 		}
-		status = fdf_read_data_1d( f2, templ2, grid_size_x, data2 );
 		if( t2 == 32 ){
 			for( int i = 0; i < grid_size_x; ++i ){
 				if( data[i] != data2[i] + 1 ){
@@ -173,6 +173,11 @@ int test_high_level()
 {
 	int status = 0;
 	fdf_file *f = fdf_open( "test.fdf", FDF_READ_ONLY, &status );
+	if( status != FDF_SUCCESS ){
+		fprintf( stderr, "Opening file for read failed! err = %d\n",
+		         status );
+		return status;
+	}
 	fdf_template *templ = fdf_template_init();
 
 	fdf_read_template( f, templ );
@@ -232,8 +237,9 @@ int test_high_level()
 	// double *data = (double*)data_ptr;
 	double *grid = grids[0];
 	double *data = raw_data;
-
-	while( fdf_read_data_block( f, templ, grid_specs[0], &time, raw_data ) == FDF_SUCCESS ){
+	int data_size = fdf_grid_meta_get_size( grid_specs[0] );
+	while( fdf_read_data_block( f, templ, grid_specs[0], &time, raw_data )
+	       == ( data_size + 1 )  ){
 		for( int i = 0; i < fdf_grid_meta_get_size(grid_specs[0]); ++i ){
 			fprintf( stderr, "t = %d:  x[%d]=%g, d[%d]=%g\n", time, i,
 			         grid[i], i, data[i] );

@@ -4,18 +4,67 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
-/* Header for verification of integrity and version info */
-static const char fdf_header[] = { '@', 'F', 'D', 'F', 13, 37, 0, 0,
-                                   0, 0, 0, 1, 0, 0, 0, 0,
-                                   'F', 'D', 'F', 'D', 'F', 'D', 'F', 'D',
-                                   'F', 'D', 'F', 'D', 'F', 'D', 'F', '@' };
+
+/* Magic header for file type and verification of integrity */
+static const char magic_cookie[24] = { '@', 'F', 'D', 'F',
+                                       13, 37, 0, 0,
+                                       'F', 'D', 'F', 'D',
+                                       'F', 'D', 'F', 'D',
+                                       'F', 'D', 'F', 'D',
+                                       'F', 'D', 'F', '@' };
+
+struct checksum_uint128 {
+	uint64_t s1, s2;
+};
+
+/**
+   \brief The header that is present in each file.
+
+   The header is 64 bits in size.
+*/
+struct fdf_header {
+	/** The magic header. */
+        char magic[24];         /* offset  0, 40 bits left. */
+	/** Version number, first 4 bits are major, last 4 bits are minor. */
+	char version[8];        /* offset 24, 32 bits left. */
+	/** File size in bytes */
+	uint64_t file_size;     /* offset 32, 24 bits left. */
+	/** MD5 Checksum */
+	struct checksum_uint128 checksum;  /* offset 40, 8 bits left. */
+
+	/** Number of data blocks. */
+	uint32_t n_blocks;                 /* offset 56, 4 bits left. */
+
+	/** These are reserved for future use/unused.
+	    Extension can always happen via the UTF-8 way, where
+	    the last bit of unused will flag whether or not more
+	    headers follow. Unused is guaranteed to be 0 for a 64 bit header.
+	    for now is set to all zeros.
+	 */
+	char unused[4];                    /* offset 60, 4  bits left */
+};
+
+
+
+
+unsigned int fdf_write_file_meta( fdf_file *f, int *status );
+
 
 
 void fdf_close( fdf_file *bm )
 {
+	/* Write some pending info to the header of the file if the file was
+	   opened in write or append mode. */
+	if( bm->open_mode == FDF_WRITE_ONLY ||
+	    bm->open_mode == FDF_APPEND_ONLY ){
+		int status = FDF_SUCCESS;
+		fdf_write_file_meta( bm, &status );
+	}
 	fclose(bm->f);
 	free(bm);
 }
@@ -25,6 +74,7 @@ fdf_file *fdf_open( const char *fname, int mode, int *status )
 {
 	fdf_file *bm = malloc( sizeof( fdf_file ) );
 	bm->f = NULL;
+
 	if( mode == FDF_READ_ONLY ){
 		bm->f = fopen( fname, "rb" );
 		if( !bm->f ){
@@ -33,7 +83,7 @@ fdf_file *fdf_open( const char *fname, int mode, int *status )
 			fclose( bm->f );
 			bm->f = NULL;
 		}else{
-			// AOK.
+			/* AOK. */
 			*status = FDF_SUCCESS;
 		}
 	}else if( mode == FDF_WRITE_ONLY ){
@@ -46,6 +96,10 @@ fdf_file *fdf_open( const char *fname, int mode, int *status )
 	}else{
 		*status = FDF_UNKNOWN_WRITE_MODE;
 	}
+
+	bm->bytes_written = 0;
+	bm->blocks_written = 0;
+	bm->open_mode = mode;
 	return bm;
 }
 
@@ -53,51 +107,103 @@ fdf_file *fdf_open( const char *fname, int mode, int *status )
 
 unsigned int fdf_write_header( fdf_file *fdf_f )
 {
-	unsigned int size_write = sizeof(char);
-	unsigned int n_written = fwrite( (void*)fdf_header, size_write,
-	                                 sizeof(fdf_header)/sizeof(char),
-	                                 fdf_f->f );
-	return n_written * size_write;
+	struct fdf_header my_header;
+	/*
+	fprintf( stderr, "Writing header to file at %p\n", (void*)fdf_f->f );
+	fprintf( stderr, "Offsets of members are:\n" );
+	fprintf( stderr, "  magic: %lu\n"    , offsetof(struct fdf_header, magic));
+	fprintf( stderr, "  version: %lu\n"  , offsetof(struct fdf_header, version));
+	fprintf( stderr, "  file_size: %lu\n", offsetof(struct fdf_header, file_size));
+	fprintf( stderr, "  checksum: %lu\n",  offsetof(struct fdf_header, checksum));
+	fprintf( stderr, "  n_blocks: %lu\n",  offsetof(struct fdf_header, n_blocks));
+	fprintf( stderr, "  unused: %lu\n",    offsetof(struct fdf_header, unused));
+	*/
+	memcpy( my_header.magic, magic_cookie,
+	        sizeof(magic_cookie)/sizeof(char) );
+
+	my_header.version[0] = 0;
+	my_header.version[1] = 0;
+	my_header.version[2] = 0;
+	my_header.version[3] = 1;
+	my_header.version[4] = 0;
+	my_header.version[5] = 0;
+	my_header.version[6] = 0;
+	my_header.version[7] = 1;
+
+	/* Now figure out how you can seek back to the following bits
+	   to write checksums and the like... */
+	my_header.n_blocks  = 0;
+	my_header.file_size = 8; /* Initial file size is 8 bytes. */
+	my_header.checksum.s1 = 0;
+	my_header.checksum.s2 = 0;
+	my_header.unused[0] = 0;
+	my_header.unused[1] = 0;
+	my_header.unused[2] = 0;
+	my_header.unused[3] = 0;
+
+	unsigned int size_write = sizeof(struct fdf_header);
+	unsigned int n_written = fwrite( &my_header, size_write, 1, fdf_f->f );
+	assert( n_written * size_write == 8*my_header.file_size &&
+	        "Programmer's assumption on file size incorrect!" );
+	int bytes = n_written * size_write;
+	fdf_f->bytes_written += bytes;
+	return bytes;
 }
 
 
-unsigned int fdf_read_header( fdf_file *fdf_f, char *header )
+unsigned int fdf_read_header( fdf_file *fdf_f, struct fdf_header *header )
 {
-	unsigned int size_read = sizeof(char);
-	unsigned int n_read = fread( (void*)header, size_read,
-	                             sizeof(fdf_header), fdf_f->f );
-	return n_read * size_read;;
+	unsigned int size_read = sizeof(struct fdf_header);
+	unsigned int n_read = fread( header, size_read, 1, fdf_f->f );
+	return n_read * size_read;
 }
 
 
 int fdf_verify_header( fdf_file *fdf_f )
 {
-	char header[sizeof(fdf_header)];
-	int bytes_read = fdf_read_header( fdf_f, header );
-	if( bytes_read != sizeof(fdf_header) ){
+	struct fdf_header my_header;
+	int bytes_read = fdf_read_header( fdf_f, &my_header );
+	if( bytes_read != sizeof(struct fdf_header) ){
 		return FDF_READ_BYTES_MISMATCH;
 	}
-	for( int i = 0; i < sizeof(fdf_header)/sizeof(char); ++i ){
-		if( header[i] != fdf_header[i] ){
-			return FDF_CORRUPT_OR_NO_HEADER;
-		}
+
+	/* Various checks on the header: */
+	if( fdf_verify_header_cookie( &my_header ) == 0 ){
+		return FDF_CORRUPT_OR_NO_HEADER;
 	}
 	return FDF_SUCCESS;
 }
 
 
+int fdf_verify_header_cookie( const void *header )
+{
+	const struct fdf_header *my_header = header;
+	for( int i = 0; i < sizeof(my_header->magic); ++i ){
+		if( my_header->magic[i] != magic_cookie[i] ){
+			return 0;
+		}
+	}
+	return 1;
+}
+
+
+
 unsigned int fdf_write_template( fdf_file *f, const fdf_template *templ )
 {
-	unsigned int n_written = 0;
 	unsigned int tot_bytes = 0;
 
-	n_written = fdf_write_header( f );
-	fprintf( stderr, "Header has a size of %lu chars.\n", sizeof(fdf_header) );
-	assert( n_written == sizeof(fdf_header) && "Byte write mismatch!" );
+	tot_bytes = fdf_write_header( f );
+	long unsigned int header_size = sizeof(struct fdf_header);
+	long unsigned int template_size = sizeof(struct fdf_template);
+	assert( tot_bytes == header_size && "Byte write mismatch!" );
 
-	tot_bytes += n_written * sizeof(char);
-	n_written = fwrite( templ, sizeof(fdf_template), 1, f->f );
-	tot_bytes += n_written*sizeof(fdf_template);
+	int n_written = fwrite( templ, sizeof(fdf_template), 1, f->f );
+	unsigned int bytes_template = n_written * sizeof(fdf_template);
+	tot_bytes += bytes_template;
+	assert( tot_bytes == header_size + template_size
+	        && "Byte write mismatch!" );
+
+	f->bytes_written += bytes_template;
 	return tot_bytes;
 }
 
@@ -109,7 +215,10 @@ unsigned int fdf_write_time( fdf_file *f, const fdf_template *templ,
 	unsigned int n_written = fwrite( tstamp, size_write, 1, f->f );
 	assert( n_written == 1 &&
 		"Byte write mismatch!" );
-	return n_written * size_write;
+
+	unsigned int bytes = n_written * size_write;
+	f->bytes_written += bytes;
+	return bytes;
 }
 
 
@@ -133,6 +242,7 @@ unsigned int fdf_write_grid_meta( fdf_file *f, const fdf_grid_meta *grid_spec )
 	assert( n_written == 1 &&
 		"Byte write mismatch!" );
 	tot_bytes += n_written*sizeof(unsigned int);
+	f->bytes_written += tot_bytes;
 	return tot_bytes;
 }
 
@@ -142,27 +252,11 @@ unsigned int fdf_write_grid_data( fdf_file *f, const fdf_grid_meta *grid_spec,
 {
 	unsigned int size_write = fdf_data_type_to_rw_size( grid_spec->type );
 	int n_written = fwrite( grid, size_write, grid_spec->size, f->f );
-	assert( n_written == grid_spec->size &&
-		"Byte write mismatch!" );
-	int tot_bytes = n_written * size_write;
+	assert( n_written == grid_spec->size && "Byte write mismatch!" );
+	unsigned int tot_bytes = n_written * size_write;
+	f->bytes_written += tot_bytes;
 	return tot_bytes;
 }
-
-
-unsigned int fdf_write_data_1d( fdf_file *f, const fdf_template *templ,
-				int Nx, void *data )
-{
-	assert( fdf_verify_data_type( templ->data_type ) &&
-		"Unknown data type!" );
-	unsigned int size_write = fdf_data_type_to_rw_size( templ->data_type );
-	unsigned int n_written = fwrite( data, size_write, Nx, f->f );
-	unsigned int bytes = n_written * size_write;
-
-	assert( bytes == size_write*Nx &&
-		"Byte write mismatch!" );
-	return bytes;
-}
-
 
 
 
@@ -181,16 +275,7 @@ int fdf_read_time( fdf_file *f, const fdf_template *templ, void *tstamp )
 {
 	unsigned int size_read = fdf_data_type_to_rw_size( templ->time_type );
 	unsigned int n_read = fread( tstamp, size_read, 1, f->f );
-	if( n_read != 1 ){
-		// Check if it was EOF or something else:
-		if( feof(f->f) ){
-			return FDF_EOF_REACHED;
-		}else{
-			return FDF_INVALID_READ;
-		}
-	}
-
-	return FDF_SUCCESS;
+	return n_read;
 }
 
 
@@ -214,47 +299,158 @@ int fdf_read_grid_data( fdf_file *f, const fdf_grid_meta *grid_specs,
 }
 
 
-int fdf_read_data_1d( fdf_file *f, const fdf_template *templ, int N, void *data )
+int fdf_read_data_raw( fdf_file *f, const fdf_template *templ,
+                       const fdf_grid_meta *grid_specs, void *data )
 {
-	int n_read = fdf_read_data_raw( f, templ, N, data );
-	assert( n_read == N && "Byte read mismatch!" );
-	return FDF_SUCCESS;
+	unsigned int size_read = fdf_data_type_to_rw_size( templ->data_type );
+	int n_elements = grid_specs[0].size;
+	if( templ->dimension == 2 ){
+		n_elements *= grid_specs[1].size;
+	}
+	int n_read = fread( data, size_read, n_elements, f->f );
+	assert( n_read == n_elements && "Byte read mismatch!" );
+	return n_read;
+}
+
+
+
+unsigned int fdf_write_data_raw( fdf_file *f, const fdf_template *templ,
+                                 const fdf_grid_meta *grid_specs, void *data )
+{
+	unsigned int size_write = fdf_data_type_to_rw_size( templ->data_type );
+	int n_elements = grid_specs[0].size;
+	if( templ->dimension == 2 ){
+		n_elements *= grid_specs[1].size;
+	}
+
+	int n_write = fwrite( data, size_write, n_elements, f->f );
+	assert( n_write == n_elements && "Byte read mismatch!" );
+	f->bytes_written += n_elements*size_write;
+	return n_elements*size_write;
 }
 
 
 
 
-unsigned int fdf_write_data_2d( fdf_file *f, const fdf_template *templ,
-				int Nx, int Ny, void *data )
+unsigned int fdf_write_data_block( fdf_file *f, const fdf_template *templ,
+                                   const fdf_grid_meta *grid_specs,
+                                   void *time, void *data )
 {
-	assert( fdf_verify_data_type( templ->data_type ) &&
-		"Unknown data type!" );
-	unsigned int size_write = fdf_data_type_to_rw_size( templ->data_type );
-	unsigned int n_written = fwrite( data, size_write, Nx*Ny, f->f );
-	unsigned int bytes = n_written * size_write;
+	unsigned int bytes = 0;
+	bytes += fdf_write_time( f, templ, time );
+	bytes += fdf_write_data_raw( f, templ, grid_specs, data );
 
-	assert( bytes == size_write*Nx*Ny &&
-		"Byte write mismatch!" );
+	f->blocks_written++;
+
 	return bytes;
 }
 
 
 
-int fdf_read_data_2d( fdf_file *f, const fdf_template *templ,
-		      int Nx, int Ny, void *data )
+int fdf_read_data_block( fdf_file *f, const fdf_template *templ,
+                         const fdf_grid_meta *grid_specs,
+                         void *time, void *data )
 {
-	int n_read = fdf_read_data_raw( f, templ, Nx*Ny, data );
-	assert( n_read == Nx*Ny && "Byte read mismatch!" );
-	return FDF_SUCCESS;
+	int n_read = 0;
+	n_read += fdf_read_time( f, templ, time );
+	if( n_read != 1 ){
+		return 0;
+	}
+	int n_expect = grid_specs[0].size;
+	if( templ->dimension == 2 ){
+		n_expect *= grid_specs[1].size;
+	}
+	n_read += fdf_read_data_raw( f, templ, grid_specs, data );
+	if( n_read != n_expect + 1 ){
+		return 0;
+	}
+	return n_read;
 }
 
 
 
-int fdf_read_data_raw( fdf_file *f, const fdf_template *templ,
-                       int Ntot, void *data )
+int fdf_getpos( fdf_file *f, fpos_t *pos )
 {
-	unsigned int size_read = fdf_data_type_to_rw_size( templ->data_type );
-	int n_read = fread( data, size_read, Ntot, f->f );
-	assert( n_read == Ntot && "Byte read mismatch!" );
-	return n_read;
+	return fgetpos( f->f, pos );
+}
+
+int fdf_jump_to_pos( fdf_file *f, const fpos_t *pos )
+{
+	return fsetpos( f->f, pos );
+}
+
+int fdf_jump_to_n_blocks( fdf_file *f )
+{
+	return fseek( f->f, 24+8+8+16, SEEK_SET );
+}
+
+int fdf_jump_to_file_size( fdf_file *f )
+{
+	return fseek( f->f, 24+8, SEEK_SET );
+}
+
+int fdf_jump_to_checksum( fdf_file *f )
+{
+	return fseek( f->f, 24+8+8, SEEK_SET );
+}
+
+
+void fdf_calc_checksum( fdf_file *f, struct checksum_uint128 *chk )
+{
+	chk->s1 = 0;
+	chk->s2 = 0;
+}
+
+
+void print_bitmask( FILE *f, uint64_t number )
+{
+	int shift = 0;
+	int current_bit = 1;
+	while( shift < 63 ){
+		int c = '0';
+		if( number & current_bit ){
+			c = '1';
+		}
+		fputc( c, f );
+		++shift;
+		current_bit = 1 << shift;
+	}
+}
+
+
+void print_hexmask( FILE *f, uint64_t number )
+{
+	unsigned char *byte = (void*)(&number);
+	for( int bytes = 0; bytes < 8; ++bytes ){
+		fprintf( f, "%x ", *(byte + bytes) );
+	}
+}
+
+
+
+
+
+
+unsigned int fdf_write_file_meta( fdf_file *f, int *status )
+{
+	/* It is easiest to jump back to top and work your way down. */
+	fpos_t end_of_file;
+	*status = fdf_getpos( f, &end_of_file );
+	if( *status ){
+		return 0;
+	}
+
+	fdf_jump_to_file_size( f );
+	int bytes = fwrite( &f->bytes_written, sizeof(uint64_t), 1, f->f );
+
+	struct checksum_uint128 checksum;
+	fdf_calc_checksum( f, &checksum );
+
+	/* Do NOT count these in bytes written because they
+	   overwrite data. */
+	bytes += fwrite( &checksum, sizeof(checksum), 1, f->f );
+	bytes += fwrite( &f->blocks_written, sizeof(uint32_t), 1, f->f );
+	fdf_jump_to_pos( f, &end_of_file );
+
+	return bytes;
 }
