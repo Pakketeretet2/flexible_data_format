@@ -1,5 +1,5 @@
 CC = gcc
-FLAGS = -O3 -std=c99 -pedantic -g \
+FLAGS = -O0 -std=c99 -pedantic -g \
         -Werror=return-type -Werror=uninitialized -Wall
 
 LNK = -L./

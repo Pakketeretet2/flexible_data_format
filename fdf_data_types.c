@@ -31,3 +31,20 @@ unsigned int fdf_data_type_to_rw_size( unsigned int data_type )
 			return 0;
 	}
 }
+
+
+unsigned int fdf_data_type_to_ptr_size( unsigned int data_type )
+{
+	switch( data_type ){
+		case FDF_DATA_INT32:
+			return sizeof(int32_t*);
+		case FDF_DATA_INT64:
+			return sizeof(int64_t*);
+		case FDF_DATA_DOUBLE:
+			return sizeof(double*);
+		default:
+			// Error?
+			// assert( false && "Unknown data type!" );
+			return 0;
+	}
+}
