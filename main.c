@@ -250,11 +250,10 @@ int test_high_level()
 
 	fdf_destroy_data( data );
 	fdf_destroy_grid( templ, grids );
-	for( int i = 0; i < fdf_template_get_dimension(templ); ++i ){
-		fdf_grid_meta_destroy( grid_specs[i] );
-	}
-	fdf_template_destroy( templ );
+	fdf_destroy_grid_meta( grid_specs );
 
+	fdf_template_destroy( templ );
+	fdf_close(f);
 	return 0;
 }
 
@@ -266,7 +265,6 @@ int main( int argc, char **argv )
 	}else{
 		fprintf( stderr, "1d read/write does not work as expected.\n" );
 	}
-
 	test_high_level();
 
 	return 0;

@@ -18,6 +18,8 @@ static const char magic_cookie[24] = { '@', 'F', 'D', 'F',
                                        'F', 'D', 'F', 'D',
                                        'F', 'D', 'F', '@' };
 
+static const char fdf_version[8] = { 0, 0, 0, 1, 0, 0, 0, 2 };
+
 struct checksum_uint128 {
 	uint64_t s1, s2;
 };
@@ -121,14 +123,8 @@ unsigned int fdf_write_header( fdf_file *fdf_f )
 	memcpy( my_header.magic, magic_cookie,
 	        sizeof(magic_cookie)/sizeof(char) );
 
-	my_header.version[0] = 0;
-	my_header.version[1] = 0;
-	my_header.version[2] = 0;
-	my_header.version[3] = 1;
-	my_header.version[4] = 0;
-	my_header.version[5] = 0;
-	my_header.version[6] = 0;
-	my_header.version[7] = 1;
+	memcpy( my_header.version, fdf_version,
+	        sizeof(fdf_version)/sizeof(char) );
 
 	/* Now figure out how you can seek back to the following bits
 	   to write checksums and the like... */

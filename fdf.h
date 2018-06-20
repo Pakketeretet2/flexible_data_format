@@ -55,9 +55,11 @@ int fdf_init_data( const fdf_template *templ,
                    const fdf_grid_meta *grid_specs, void **data );
 
 
-int fdf_destroy_grid_meta( fdf_grid_meta *grid_specs );
+int fdf_destroy_grid_meta( fdf_grid_meta **grid_specs );
+
 
 int fdf_destroy_grid( const fdf_template *templ, void **grids );
+
 
 int fdf_destroy_data( void *data );
 

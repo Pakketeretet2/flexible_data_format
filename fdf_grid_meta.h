@@ -9,7 +9,6 @@ fdf_grid_meta *fdf_grid_meta_init();
 
 void fdf_grid_meta_destroy( fdf_grid_meta * );
 
-
 unsigned int fdf_grid_meta_get_type( const fdf_grid_meta * );
 
 int fdf_grid_meta_set_type( fdf_grid_meta *, unsigned int );

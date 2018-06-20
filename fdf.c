@@ -19,8 +19,14 @@ int fdf_init_grid_meta( const fdf_template *templ,
 	 */
 	int dim = templ->dimension;
 	*grid_specs = malloc( dim*sizeof(fdf_grid_meta*) );
+	if( !(*grid_specs) ){
+		return FDF_MALLOC_FAILED;
+	}
+
 	fdf_grid_meta *grid_specs_ = malloc( dim*sizeof(fdf_grid_meta) );
-	if( !(*grid_specs) || !grid_specs_ ){
+	fprintf( stderr, "grid_specs_ lives at %p\n", (void*)grid_specs_ );
+	if( !grid_specs_ ){
+		free(grid_specs);
 		return FDF_MALLOC_FAILED;
 	}
 	(*grid_specs)[0] = grid_specs_;
@@ -31,8 +37,10 @@ int fdf_init_grid_meta( const fdf_template *templ,
 }
 
 
-int fdf_destroy_grid_meta( fdf_grid_meta *grid_specs )
+int fdf_destroy_grid_meta( fdf_grid_meta **grid_specs )
 {
+	// grid_specs[0] points to a malloc'ed pointer:
+	free( grid_specs[0] );
 	free( grid_specs );
 	return FDF_SUCCESS;
 }
@@ -84,6 +92,7 @@ int fdf_destroy_grid( const fdf_template *templ, void **grids )
 	for( int i = 0; i <templ->dimension; ++i ){
 		free(grids[i]);
 	}
+	free(grids);
 	return FDF_SUCCESS;
 }
 
