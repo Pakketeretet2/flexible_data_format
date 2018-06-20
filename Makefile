@@ -1,6 +1,6 @@
 CC = gcc
-FLAGS = -O3 -std=c99 -pedantic -g \
-        -Werror=return-type -Werror=uninitialized -Wall
+FLAGS = -O0 -std=c99 -pedantic -g -Wall -Werror \
+        -Werror=return-type -Werror=uninitialized -lm
 
 LNK = -L./
 INC = -I./
